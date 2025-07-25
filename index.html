@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>N-Dimensional Prioritization Matrix</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
+        }
+        .card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            padding: 1.5rem;
+        }
+        @keyframes pop-in {
+            0% { transform: scale(0); opacity: 0; }
+            80% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .bubble {
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: absolute;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            animation: pop-in 0.5s ease-out forwards;
+            cursor: grab;
+            border-width: 2px;
+        }
+        .bubble.no-drag {
+            cursor: not-allowed;
+        }
+        .bubble-label {
+            font-size: 10px;
+            color: #1e293b;
+            font-weight: 500;
+            white-space: nowrap;
+            padding: 0 4px;
+            text-align: center;
+            line-height: 1.2;
+        }
+        .bubble.dragging {
+            cursor: grabbing;
+            transform: scale(1.15);
+            opacity: 0.9;
+            z-index: 50;
+            transition: none;
+        }
+        .bubble .tooltip {
+            visibility: hidden;
+            width: max-content;
+            background-color: #1e293b;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px 10px;
+            position: absolute;
+            z-index: 10;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        .bubble:hover .tooltip {
+            visibility: visible;
+            opacity: 1;
+        }
+        .switch {
+            position: relative; display: inline-block; width: 34px; height: 20px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 20px;
+        }
+        .slider:before {
+            position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%;
+        }
+        input:checked + .slider { background-color: #4f46e5; }
+        input:checked + .slider:before { transform: translateX(14px); }
+        
+        .palette-swatch {
+            display: flex;
+            gap: -4px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            border-radius: 0.5rem;
+            padding: 2px;
+        }
+        .palette-swatch.active {
+            border-color: #4f46e5;
+        }
+        .palette-swatch .swatch-color {
+            width: 1rem;
+            height: 1rem;
+            border-radius: 50%;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-slate-900">N-Dimensional Prioritization Matrix</h1>
+            <p class="text-slate-600 mt-2">Drag bubbles on the chart to dynamically update their values.</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            
+            <!-- Left Panel -->
+            <div class="card space-y-6">
+                <div class="flex justify-between items-start">
+                    <h2 class="text-xl font-semibold text-slate-900">1. Setup</h2>
+                    <button id="clear-data-btn" class="text-sm bg-red-500 text-white px-3 py-1 rounded-md font-semibold hover:bg-red-600 transition-colors" title="Clear all items and dimensions and start fresh.">Clear & Reset</button>
+                </div>
+                <div>
+                    <h3 class="font-semibold mb-2 text-slate-800">Add Items</h3>
+                    <div class="flex gap-3">
+                        <input type="text" id="item-input" placeholder="e.g., New Feature" class="flex-grow p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <button id="add-item-btn" class="bg-indigo-600 text-white px-5 py-2 rounded-md font-semibold hover:bg-indigo-700 transition-colors">Add</button>
+                    </div>
+                    <ul id="items-list" class="mt-3 space-y-2"></ul>
+                </div>
+                <div>
+                    <h3 class="font-semibold mb-2 text-slate-800">Add Base Dimensions</h3>
+                    <div class="flex gap-3">
+                        <input type="text" id="dimension-input" placeholder="e.g., Impact, Effort" class="flex-grow p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <button id="add-dimension-btn" class="bg-indigo-600 text-white px-5 py-2 rounded-md font-semibold hover:bg-indigo-700 transition-colors">Add</button>
+                    </div>
+                    <ul id="dimensions-list" class="mt-3 space-y-2"></ul>
+                </div>
+                <div class="border-t pt-4">
+                    <h3 class="font-semibold mb-2 text-slate-800">Create Aggregate Dimension</h3>
+                    <div class="space-y-3">
+                        <input type="text" id="agg-name-input" placeholder="New Aggregate Name" class="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <div class="p-3 bg-slate-50 rounded-md border">
+                            <label class="block text-sm font-medium text-slate-700 mb-2">Sum of Dimensions:</label>
+                            <div id="agg-checklist" class="grid grid-cols-2 gap-2">
+                                <!-- Checkboxes will be injected here -->
+                            </div>
+                        </div>
+                        <button id="add-agg-btn" class="w-full bg-emerald-600 text-white px-5 py-2 rounded-md font-semibold hover:bg-emerald-700 transition-colors">Create Aggregate</button>
+                    </div>
+                </div>
+                <div>
+                    <h2 class="text-xl font-semibold mb-3 text-slate-900">2. Set Values (0-10)</h2>
+                    <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                        <table id="data-table" class="min-w-full bg-white">
+                            <thead class="bg-slate-50"></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel -->
+            <div class="card">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold text-slate-900">3. Visualize & Prioritize</h2>
+                    <div class="relative">
+                         <button id="ranked-views-btn" class="text-sm bg-indigo-600 text-white px-3 py-1 rounded-md font-semibold hover:bg-indigo-700 transition-colors flex items-center gap-2" title="Get a ranked list of the most insightful chart views.">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a1 1 0 011-1h14a1 1 0 110 2H3a1 1 0 01-1-1z" /></svg>
+                            Ranked Views
+                        </button>
+                        <div id="ranked-views-dropdown" class="hidden absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
+                            <div class="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="space-y-2">
+                            <label for="x-axis-select" class="block text-sm font-medium text-slate-700">X-Axis</label>
+                            <select id="x-axis-select" class="block w-full p-2 border-slate-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"></select>
+                            <div class="flex items-center justify-between pt-1" title="Invert the scale for this axis (e.g., a high value becomes low).">
+                                <label for="x-invert-toggle" class="text-sm text-slate-900">Invert Axis</label>
+                                <label class="switch"><input id="x-invert-toggle" type="checkbox"><span class="slider"></span></label>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <label for="y-axis-select" class="block text-sm font-medium text-slate-700">Y-Axis</label>
+                            <select id="y-axis-select" class="block w-full p-2 border-slate-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"></select>
+                            <div class="flex items-center justify-between pt-1" title="Invert the scale for this axis (e.g., a high value becomes low).">
+                                <label for="y-invert-toggle" class="text-sm text-slate-900">Invert Axis</label>
+                                <label class="switch"><input id="y-invert-toggle" type="checkbox"><span class="slider"></span></label>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <label for="size-select" class="block text-sm font-medium text-slate-700">Bubble Size</label>
+                            <select id="size-select" class="block w-full p-2 border-slate-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"></select>
+                             <div class="flex items-center justify-between pt-1" title="Invert the scale for bubble size (e.g., a high value becomes a small bubble).">
+                                <label for="size-invert-toggle" class="text-sm text-slate-900">Invert Size</label>
+                                <label class="switch"><input id="size-invert-toggle" type="checkbox"><span class="slider"></span></label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 border-t border-slate-200 pt-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">Color Palette</label>
+                            <div id="palette-selector" class="flex flex-wrap gap-2"></div>
+                        </div>
+                        <div class="flex items-center justify-end" title="Show or hide item names directly on the bubbles.">
+                             <label for="show-labels-toggle" class="text-sm font-medium text-slate-900 mr-3">Show Labels</label>
+                             <label class="switch"><input id="show-labels-toggle" type="checkbox"><span class="slider"></span></label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chart Area -->
+                <div class="relative">
+                    <div id="chart-container" class="w-full h-96 bg-slate-50 rounded-lg mt-6">
+                        <div id="chart-bg" class="absolute inset-0 w-full h-full pointer-events-none p-6">
+                            <div class="w-full h-full relative">
+                                <div class="absolute bottom-0 left-0 w-full h-px bg-slate-400"></div>
+                                <div class="absolute bottom-0 left-0 h-full w-px bg-slate-400"></div>
+                                <div class="absolute top-1/2 left-0 w-full h-px bg-slate-300/80 border-t border-dashed border-slate-400"></div>
+                                <div class="absolute left-1/2 top-0 h-full w-px bg-slate-300/80 border-l border-dashed border-slate-400"></div>
+                            </div>
+                        </div>
+                        <div id="chart-labels" class="absolute inset-0 w-full h-full pointer-events-none text-xs text-slate-500">
+                            <div class="absolute top-0 -left-12 w-12 h-full flex flex-col items-center py-6">
+                                <span id="y-max-label"></span>
+                                <div class="flex-grow flex flex-col items-center justify-center gap-2">
+                                    <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
+                                    <div id="y-axis-label" class="font-semibold text-slate-600 -rotate-90 whitespace-nowrap"></div>
+                                    <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </div>
+                                <span id="y-min-label"></span>
+                            </div>
+                            <div class="absolute left-0 -bottom-10 w-full h-10 flex items-center px-6">
+                                 <span id="x-min-label"></span>
+                                 <div class="flex-grow flex items-center justify-center gap-2">
+                                    <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                                    <div id="x-axis-label" class="font-semibold text-slate-600"></div>
+                                    <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                                 </div>
+                                 <span id="x-max-label"></span>
+                            </div>
+                        </div>
+                        <div id="bubble-container" class="absolute inset-6"></div>
+                    </div>
+                     <div id="agg-drag-note" class="hidden text-center text-xs text-slate-500 mt-2">
+                        Note: Bubbles cannot be dragged when an aggregate dimension is on an axis.
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- CONSTANTS ---
+            const CHART_RANGE = { min: 0, max: 10 };
+            const PALETTES = {
+                vibrant: { name: 'Vibrant', colors: ['#3b82f6', '#ef4444', '#10b981', '#f97316', '#8b5cf6', '#ec4899'] },
+                corporate: { name: 'Corporate', colors: ['#0a3a6b', '#005b96', '#00a896', '#6497b1', '#9ca3af', '#f59e0b'] },
+                forest: { name: 'Forest', colors: ['#22c55e', '#15803d', '#059669', '#047857', '#065f46', '#064e3b'] },
+                pastel: { name: 'Pastel', colors: ['#a5b4fc', '#fca5a5', '#86efac', '#fdba74', '#c4b5fd', '#f9a8d4'] },
+                sunset: { name: 'Sunset', colors: ['#f97316', '#f59e0b', '#ef4444', '#db2777', '#7c3aed', '#4f46e5'] },
+            };
+            const STORAGE_KEY = 'nDimMatrixState';
+
+            // --- STATE MANAGEMENT ---
+            const getInitialExampleState = () => ({
+                items: ['New Feature A', 'Tech Debt Refactor', 'UI Refresh'],
+                dimensions: ['Impact', 'Effort', 'Confidence'],
+                aggregates: {},
+                data: {
+                    'New Feature A': { 'Impact': 8, 'Effort': 5, 'Confidence': 6 },
+                    'Tech Debt Refactor': { 'Impact': 4, 'Effort': 8, 'Confidence': 9 },
+                    'UI Refresh': { 'Impact': 6, 'Effort': 3, 'Confidence': 7 },
+                },
+                theme: { selectedPalette: 'vibrant', showLabels: false },
+                axis: { x: 'Effort', y: 'Impact', size: 'Confidence', inverted: { x: true, y: false, size: false } },
+                ui: { showRankedViews: false },
+                dragging: { active: false, item: null, element: null }
+            });
+
+            const getEmptyState = () => ({
+                items: [],
+                dimensions: [],
+                aggregates: {},
+                data: {},
+                theme: { selectedPalette: 'vibrant', showLabels: false },
+                axis: { x: null, y: null, size: null, inverted: { x: false, y: false, size: false } },
+                ui: { showRankedViews: false },
+                dragging: { active: false, item: null, element: null }
+            });
+
+            const loadState = () => {
+                try {
+                    const savedState = localStorage.getItem(STORAGE_KEY);
+                    if (savedState) {
+                        const parsed = JSON.parse(savedState);
+                        parsed.theme = { ...getEmptyState().theme, ...parsed.theme };
+                        parsed.ui = { ...getEmptyState().ui };
+                        parsed.aggregates = parsed.aggregates || {};
+                        return parsed;
+                    }
+                } catch (e) { console.error("Failed to parse state from localStorage", e); }
+                return getInitialExampleState();
+            };
+
+            let state = loadState();
+            
+            const saveState = () => {
+                try {
+                    const stateToSave = { ...state, dragging: getEmptyState().dragging, ui: getEmptyState().ui };
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
+                } catch (e) { console.error("Failed to save state to localStorage", e); }
+            };
+
+            // --- DOM ELEMENT REFERENCES ---
+            const getEl = (id) => document.getElementById(id);
+            const itemInput = getEl('item-input'), addItemBtn = getEl('add-item-btn'), itemsList = getEl('items-list');
+            const dimensionInput = getEl('dimension-input'), addDimensionBtn = getEl('add-dimension-btn'), dimensionsList = getEl('dimensions-list');
+            const aggNameInput = getEl('agg-name-input'), aggChecklist = getEl('agg-checklist'), addAggBtn = getEl('add-agg-btn');
+            const dataTable = getEl('data-table'), tableHead = dataTable.querySelector('thead'), tableBody = dataTable.querySelector('tbody');
+            const xAxisSelect = getEl('x-axis-select'), yAxisSelect = getEl('y-axis-select'), sizeSelect = getEl('size-select');
+            const xInvertToggle = getEl('x-invert-toggle'), yInvertToggle = getEl('y-invert-toggle'), sizeInvertToggle = getEl('size-invert-toggle');
+            const bubbleContainer = getEl('bubble-container');
+            const xAxisLabel = getEl('x-axis-label'), yAxisLabel = getEl('y-axis-label');
+            const xMinLabel = getEl('x-min-label'), xMaxLabel = getEl('x-max-label'), yMinLabel = getEl('y-min-label'), yMaxLabel = getEl('y-max-label');
+            const paletteSelector = getEl('palette-selector');
+            const clearDataBtn = getEl('clear-data-btn');
+            const rankedViewsBtn = getEl('ranked-views-btn');
+            const rankedViewsDropdown = getEl('ranked-views-dropdown');
+            const showLabelsToggle = getEl('show-labels-toggle');
+            const aggDragNote = getEl('agg-drag-note');
+
+            // --- LOGIC ---
+            const calculateAggregates = () => {
+                const allAggregates = Object.keys(state.aggregates);
+                state.items.forEach(item => {
+                    allAggregates.forEach(aggName => {
+                        const baseDims = state.aggregates[aggName];
+                        const sum = baseDims.reduce((total, dim) => total + (state.data[item][dim] || 0), 0);
+                        state.data[item][aggName] = sum;
+                    });
+                });
+            };
+
+            const getAllDimensions = () => [...state.dimensions, ...Object.keys(state.aggregates)];
+
+
+            // --- RENDER FUNCTIONS ---
+            function renderItemsList() {
+                itemsList.innerHTML = '';
+                state.items.forEach(item => {
+                    const li = document.createElement('li');
+                    li.className = 'flex justify-between items-center bg-slate-100 p-2 rounded-md';
+                    li.innerHTML = `<span>${item}</span><button data-item="${item}" class="delete-item-btn text-red-500 hover:text-red-700 font-bold text-xl px-2 opacity-50 hover:opacity-100 transition-opacity">&times;</button>`;
+                    itemsList.appendChild(li);
+                });
+            }
+
+            function renderDimensionsList() {
+                dimensionsList.innerHTML = '';
+                state.dimensions.forEach(dim => {
+                    const li = document.createElement('li');
+                    li.className = 'flex justify-between items-center bg-slate-100 p-2 rounded-md';
+                    li.innerHTML = `<span>${dim}</span><button data-dimension="${dim}" class="delete-dim-btn text-red-500 hover:text-red-700 font-bold text-xl px-2 opacity-50 hover:opacity-100 transition-opacity">&times;</button>`;
+                    dimensionsList.appendChild(li);
+                });
+                Object.keys(state.aggregates).forEach(aggName => {
+                    const li = document.createElement('li');
+                    li.className = 'flex justify-between items-center bg-emerald-50 p-2 rounded-md';
+                    li.innerHTML = `<span class="font-semibold text-emerald-800">${aggName} <span class="text-xs font-normal text-slate-500">(${state.aggregates[aggName].join(' + ')})</span></span><button data-aggregate="${aggName}" class="delete-agg-btn text-red-500 hover:text-red-700 font-bold text-xl px-2 opacity-50 hover:opacity-100 transition-opacity">&times;</button>`;
+                    dimensionsList.appendChild(li);
+                });
+            }
+
+            function renderAggregateChecklist() {
+                aggChecklist.innerHTML = '';
+                if (state.dimensions.length === 0) {
+                    aggChecklist.innerHTML = `<span class="text-sm text-slate-500 col-span-2">Add base dimensions first.</span>`;
+                    return;
+                }
+                state.dimensions.forEach(dim => {
+                    const div = document.createElement('div');
+                    div.className = 'flex items-center';
+                    div.innerHTML = `<input id="agg-check-${dim}" name="agg-dim" type="checkbox" value="${dim}" class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"><label for="agg-check-${dim}" class="ml-2 block text-sm text-gray-900">${dim}</label>`;
+                    aggChecklist.appendChild(div);
+                });
+            }
+
+            function renderDataTable() {
+                tableHead.innerHTML = '';
+                tableBody.innerHTML = '';
+                const allDims = getAllDimensions();
+                if (allDims.length === 0 || state.items.length === 0) {
+                    tableBody.innerHTML = '<tr><td class="text-center p-4 text-slate-500" colspan="100%">Add items and dimensions to begin.</td></tr>';
+                    return;
+                }
+                const headerRow = document.createElement('tr');
+                let headerHTML = '<th class="p-3 text-left font-semibold text-slate-600">Item</th>';
+                allDims.forEach(dim => {
+                    headerHTML += `<th class="p-3 w-24 text-center font-semibold text-slate-600">${dim}</th>`;
+                });
+                headerRow.innerHTML = headerHTML;
+                tableHead.appendChild(headerRow);
+                state.items.forEach((item) => {
+                    const dataRow = document.createElement('tr');
+                    dataRow.className = 'border-t border-slate-200';
+                    let rowHTML = `<td class="p-3 font-medium text-slate-800">${item}</td>`;
+                    allDims.forEach(dim => {
+                        const value = state.data[item]?.[dim] || 0;
+                        const isAggregate = state.aggregates.hasOwnProperty(dim);
+                        const disabled = isAggregate ? 'disabled' : '';
+                        const bgColor = isAggregate ? 'bg-slate-100' : '';
+                        rowHTML += `<td class="p-1"><input type="number" step="0.1" value="${value.toFixed(1)}" data-item="${item}" data-dimension="${dim}" class="data-input w-full p-2 text-center rounded-md border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:outline-none ${bgColor}" ${disabled}></td>`;
+                    });
+                    dataRow.innerHTML = rowHTML;
+                    tableBody.appendChild(dataRow);
+                });
+            }
+            
+            function updateTableInput(item, dimension, value) {
+                const input = tableBody.querySelector(`input[data-item="${item}"][data-dimension="${dimension}"]`);
+                if (input) input.value = value.toFixed(1);
+            }
+
+            function renderAxisSelectors() {
+                const allDims = getAllDimensions();
+                [xAxisSelect, yAxisSelect, sizeSelect].forEach(s => s.innerHTML = '');
+                allDims.forEach(dim => {
+                    const option = document.createElement('option');
+                    option.value = dim;
+                    option.textContent = dim;
+                    xAxisSelect.appendChild(option.cloneNode(true));
+                    yAxisSelect.appendChild(option.cloneNode(true));
+                    sizeSelect.appendChild(option.cloneNode(true));
+                });
+                xAxisSelect.value = state.axis.x;
+                yAxisSelect.value = state.axis.y;
+                sizeSelect.value = state.axis.size;
+                xInvertToggle.checked = state.axis.inverted.x;
+                yInvertToggle.checked = state.axis.inverted.y;
+                sizeInvertToggle.checked = state.axis.inverted.size;
+            }
+
+            function renderThemeSelectors() {
+                paletteSelector.innerHTML = '';
+                Object.keys(PALETTES).forEach(key => {
+                    const palette = PALETTES[key];
+                    const swatch = document.createElement('button');
+                    swatch.className = 'palette-swatch';
+                    swatch.dataset.palette = key;
+                    swatch.title = palette.name;
+                    if (key === state.theme.selectedPalette) swatch.classList.add('active');
+                    let swatchHTML = '';
+                    palette.colors.slice(0, 5).forEach(color => {
+                        swatchHTML += `<div class="swatch-color" style="background-color: ${color}"></div>`;
+                    });
+                    swatch.innerHTML = swatchHTML;
+                    paletteSelector.appendChild(swatch);
+                });
+                showLabelsToggle.checked = state.theme.showLabels;
+            }
+
+            function renderChart() {
+                bubbleContainer.innerHTML = '';
+                const { x: xDim, y: yDim, size: sizeDim, inverted } = state.axis;
+                xAxisLabel.textContent = xDim || 'X-Axis';
+                yAxisLabel.textContent = yDim || 'Y-Axis';
+
+                if (state.aggregates.hasOwnProperty(xDim) || state.aggregates.hasOwnProperty(yDim)) {
+                    aggDragNote.classList.remove('hidden');
+                } else {
+                    aggDragNote.classList.add('hidden');
+                }
+
+                if (!xDim || !yDim || !sizeDim || state.items.length === 0) {
+                    [xMinLabel, xMaxLabel, yMinLabel, yMaxLabel].forEach(l => l.textContent = '');
+                    return;
+                }
+                
+                const getRange = (dim) => state.aggregates.hasOwnProperty(dim) ? {min: 0, max: state.aggregates[dim].length * 10} : CHART_RANGE;
+                const xRange = getRange(xDim);
+                const yRange = getRange(yDim);
+                const sizeRange = getRange(sizeDim);
+
+                xMinLabel.textContent = (inverted.x ? xRange.max : xRange.min).toFixed(0);
+                xMaxLabel.textContent = (inverted.x ? xRange.min : xRange.max).toFixed(0);
+                yMinLabel.textContent = (inverted.y ? yRange.max : yRange.min).toFixed(0);
+                yMaxLabel.textContent = (inverted.y ? yRange.min : yRange.max).toFixed(0);
+
+                const MIN_BUBBLE_SIZE = 20;
+                const MAX_BUBBLE_SIZE = 80;
+                const currentPalette = PALETTES[state.theme.selectedPalette].colors;
+
+                state.items.forEach((item, index) => {
+                    const xVal = state.data[item]?.[xDim] || 0;
+                    const yVal = state.data[item]?.[yDim] || 0;
+                    const sizeVal = state.data[item]?.[sizeDim] || 0;
+
+                    let xPercent = (xVal - xRange.min) / (xRange.max - xRange.min) * 100;
+                    let yPercent = (yVal - yRange.min) / (yRange.max - yRange.min) * 100;
+                    let sizePercent = (sizeVal - sizeRange.min) / (sizeRange.max - sizeRange.min);
+                    
+                    if (inverted.x) xPercent = 100 - xPercent;
+                    if (inverted.y) yPercent = 100 - yPercent;
+                    if (inverted.size) sizePercent = 1 - sizePercent;
+
+                    const size = MIN_BUBBLE_SIZE + (sizePercent * (MAX_BUBBLE_SIZE - MIN_BUBBLE_SIZE));
+                    const color = currentPalette[index % currentPalette.length];
+                    
+                    const bubble = document.createElement('div');
+                    const isDraggable = !state.aggregates.hasOwnProperty(xDim) && !state.aggregates.hasOwnProperty(yDim);
+                    bubble.className = `bubble ${isDraggable ? '' : 'no-drag'}`;
+                    bubble.dataset.item = item;
+                    bubble.style.borderColor = color;
+                    bubble.style.backgroundColor = `${color}40`;
+                    bubble.style.width = `${size}px`;
+                    bubble.style.height = `${size}px`;
+                    bubble.style.left = `calc(${xPercent}% - ${size/2}px)`;
+                    bubble.style.bottom = `calc(${yPercent}% - ${size/2}px)`;
+                    
+                    const labelHTML = state.theme.showLabels ? `<span class="bubble-label">${item}</span>` : '';
+                    bubble.innerHTML = `<span class="tooltip"><strong>${item}</strong><br>${xDim}: ${xVal.toFixed(1)}<br>${yDim}: ${yVal.toFixed(1)}<br>${sizeDim}: ${sizeVal.toFixed(1)}</span>${labelHTML}`;
+                    bubbleContainer.appendChild(bubble);
+                    
+                    if (isDraggable) {
+                        bubble.addEventListener('mousedown', onDragStart);
+                    }
+                });
+            }
+            
+            function renderRankedViews() {
+                const container = rankedViewsDropdown.querySelector('.py-1');
+                container.innerHTML = '';
+                
+                if (!state.ui.showRankedViews) {
+                    rankedViewsDropdown.classList.add('hidden');
+                    return;
+                }
+                rankedViewsDropdown.classList.remove('hidden');
+
+                const ranked = findRankedViews();
+
+                if (ranked.length === 0) {
+                    container.innerHTML = `<span class="block px-4 py-2 text-sm text-gray-500">Not enough dimensions.</span>`;
+                    return;
+                }
+
+                ranked.forEach((view, index) => {
+                    const button = document.createElement('button');
+                    button.className = 'w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100';
+                    button.dataset.x = view.x;
+                    button.dataset.y = view.y;
+                    
+                    let rankText = `<strong>#${index + 1}:</strong> ${view.x} vs. ${view.y}`;
+                    if(index === 0) {
+                        rankText += ` <span class="text-xs font-bold text-indigo-600">(Best)</span>`;
+                    }
+                    button.innerHTML = rankText;
+                    
+                    button.addEventListener('click', () => {
+                        state.axis.x = view.x;
+                        state.axis.y = view.y;
+                        state.ui.showRankedViews = false;
+                        updateUIAndSave();
+                    });
+                    container.appendChild(button);
+                });
+            }
+
+            function updateUIAndSave() {
+                calculateAggregates();
+                renderItemsList();
+                renderDimensionsList();
+                renderAggregateChecklist();
+                renderDataTable();
+                renderAxisSelectors();
+                renderThemeSelectors();
+                renderChart();
+                renderRankedViews();
+                saveState();
+            }
+
+            // --- DRAG AND DROP HANDLERS ---
+            function onDragStart(e) {
+                e.preventDefault();
+                const item = e.target.closest('.bubble').dataset.item;
+                if (!item) return;
+                state.dragging = { active: true, item: item, element: e.target.closest('.bubble') };
+                state.dragging.element.classList.add('dragging');
+                document.addEventListener('mousemove', onDragMove);
+                document.addEventListener('mouseup', onDragEnd);
+            }
+
+            function onDragMove(e) {
+                if (!state.dragging.active) return;
+                
+                const { x: xDim, y: yDim, inverted } = state.axis;
+                if(state.aggregates.hasOwnProperty(xDim) || state.aggregates.hasOwnProperty(yDim)) return;
+
+                const rect = bubbleContainer.getBoundingClientRect();
+
+                let xPercent = ((e.clientX - rect.left) / rect.width) * 100;
+                let yPercent = ((rect.bottom - e.clientY) / rect.height) * 100;
+
+                xPercent = Math.max(0, Math.min(100, xPercent));
+                yPercent = Math.max(0, Math.min(100, yPercent));
+
+                let newX = (xPercent / 100) * CHART_RANGE.max;
+                let newY = (yPercent / 100) * CHART_RANGE.max;
+
+                if (inverted.x) newX = CHART_RANGE.max - newX;
+                if (inverted.y) newY = CHART_RANGE.max - newY;
+                
+                state.data[state.dragging.item][xDim] = newX;
+                state.data[state.dragging.item][yDim] = newY;
+                
+                calculateAggregates();
+                renderDataTable();
+                
+                const size = state.dragging.element.offsetWidth;
+                state.dragging.element.style.left = `calc(${xPercent}% - ${size/2}px)`;
+                state.dragging.element.style.bottom = `calc(${yPercent}% - ${size/2}px)`;
+            }
+
+            function onDragEnd() {
+                if (!state.dragging.active) return;
+                state.dragging.element.classList.remove('dragging');
+                state.dragging = { active: false, item: null, element: null };
+                document.removeEventListener('mousemove', onDragMove);
+                document.removeEventListener('mouseup', onDragEnd);
+                updateUIAndSave();
+            }
+
+            // --- EVENT HANDLERS ---
+            function handleAddItem() {
+                const newItem = itemInput.value.trim();
+                if (newItem && !state.items.includes(newItem)) {
+                    state.items.push(newItem);
+                    state.data[newItem] = {};
+                    state.dimensions.forEach(dim => { state.data[newItem][dim] = Math.round((Math.random() * 8 + 1) * 10) / 10; });
+                    itemInput.value = '';
+                    updateUIAndSave();
+                }
+            }
+            addItemBtn.addEventListener('click', handleAddItem);
+            itemInput.addEventListener('keypress', (e) => e.key === 'Enter' && handleAddItem);
+
+            function handleAddDimension() {
+                const newDim = dimensionInput.value.trim();
+                if (newDim && !getAllDimensions().includes(newDim)) {
+                    state.dimensions.push(newDim);
+                    state.items.forEach(item => { state.data[item][newDim] = Math.round((Math.random() * 8 + 1) * 10) / 10; });
+                    if (!state.axis.x) state.axis.x = newDim;
+                    if (!state.axis.y) state.axis.y = newDim;
+                    if (!state.axis.size) state.axis.size = newDim;
+                    dimensionInput.value = '';
+                    updateUIAndSave();
+                }
+            }
+            addDimensionBtn.addEventListener('click', handleAddDimension);
+            dimensionInput.addEventListener('keypress', (e) => e.key === 'Enter' && handleAddDimension);
+
+            dimensionsList.addEventListener('click', (e) => {
+                const deleteDimBtn = e.target.closest('.delete-dim-btn');
+                if (deleteDimBtn) {
+                    const dimToDelete = deleteDimBtn.dataset.dimension;
+                    state.dimensions = state.dimensions.filter(dim => dim !== dimToDelete);
+                    Object.keys(state.aggregates).forEach(aggName => {
+                        state.aggregates[aggName] = state.aggregates[aggName].filter(d => d !== dimToDelete);
+                        if(state.aggregates[aggName].length === 0) delete state.aggregates[aggName];
+                    });
+                    updateUIAndSave();
+                }
+                const deleteAggBtn = e.target.closest('.delete-agg-btn');
+                if (deleteAggBtn) {
+                    const aggToDelete = deleteAggBtn.dataset.aggregate;
+                    delete state.aggregates[aggToDelete];
+                    updateUIAndSave();
+                }
+            });
+
+            tableBody.addEventListener('input', (e) => {
+                if (e.target.classList.contains('data-input')) {
+                    const { item, dimension } = e.target.dataset;
+                    let value = parseFloat(e.target.value) || 0;
+                    value = Math.max(CHART_RANGE.min, Math.min(CHART_RANGE.max, value));
+                    state.data[item][dimension] = value;
+                    calculateAggregates();
+                    renderDataTable();
+                    renderChart();
+                }
+            });
+
+            tableBody.addEventListener('change', (e) => {
+                 if (e.target.classList.contains('data-input')) {
+                    saveState();
+                 }
+            });
+
+            [xAxisSelect, yAxisSelect, sizeSelect].forEach(select => {
+                select.addEventListener('change', (e) => {
+                    if (e.target.id === 'x-axis-select') state.axis.x = e.target.value;
+                    if (e.target.id === 'y-axis-select') state.axis.y = e.target.value;
+                    if (e.target.id === 'size-select') state.axis.size = e.target.value;
+                    updateUIAndSave();
+                });
+            });
+
+            [xInvertToggle, yInvertToggle, sizeInvertToggle].forEach(toggle => {
+                toggle.addEventListener('change', (e) => {
+                    if (e.target.id === 'x-invert-toggle') state.axis.inverted.x = e.target.checked;
+                    if (e.target.id === 'y-invert-toggle') state.axis.inverted.y = e.target.checked;
+                    if (e.target.id === 'size-invert-toggle') state.axis.inverted.size = e.target.checked;
+                    updateUIAndSave();
+                });
+            });
+
+            paletteSelector.addEventListener('click', (e) => {
+                const target = e.target.closest('.palette-.swatch');
+                if (target) {
+                    state.theme.selectedPalette = target.dataset.palette;
+                    updateUIAndSave();
+                }
+            });
+
+            showLabelsToggle.addEventListener('change', (e) => {
+                state.theme.showLabels = e.target.checked;
+                updateUIAndSave();
+            });
+
+            clearDataBtn.addEventListener('click', () => {
+                state = getEmptyState();
+                updateUIAndSave();
+            });
+
+            addAggBtn.addEventListener('click', () => {
+                const name = aggNameInput.value.trim();
+                const checked = Array.from(aggChecklist.querySelectorAll('input:checked')).map(el => el.value);
+                if(name && !getAllDimensions().includes(name) && checked.length > 0) {
+                    state.aggregates[name] = checked;
+                    aggNameInput.value = '';
+                    aggChecklist.querySelectorAll('input:checked').forEach(el => el.checked = false);
+                    updateUIAndSave();
+                }
+            });
+            
+            // --- VIEW SUGGESTION LOGIC ---
+            function findRankedViews() {
+                const allDims = getAllDimensions();
+                if (allDims.length < 2) return [];
+
+                const stdev = (arr) => {
+                    const n = arr.length;
+                    if (n === 0) return 0;
+                    const mean = arr.reduce((a, b) => a + b) / n;
+                    return Math.sqrt(arr.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / n);
+                };
+                
+                const calculateSpread = (dim1, dim2) => {
+                    const values1 = state.items.map(item => state.data[item][dim1] || 0);
+                    const values2 = state.items.map(item => state.data[item][dim2] || 0);
+                    return stdev(values1) + stdev(values2);
+                };
+
+                const ranked = [];
+                for (let i = 0; i < allDims.length; i++) {
+                    for (let j = i + 1; j < allDims.length; j++) {
+                        const dim1 = allDims[i];
+                        const dim2 = allDims[j];
+                        ranked.push({ x: dim1, y: dim2, spread: calculateSpread(dim1, dim2) });
+                    }
+                }
+                
+                return ranked.sort((a, b) => b.spread - a.spread);
+            }
+
+            rankedViewsBtn.addEventListener('click', () => {
+                state.ui.showRankedViews = !state.ui.showRankedViews;
+                renderRankedViews();
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!rankedViewsBtn.contains(e.target) && !rankedViewsDropdown.contains(e.target)) {
+                    if (state.ui.showRankedViews) {
+                        state.ui.showRankedViews = false;
+                        renderRankedViews();
+                    }
+                }
+            });
+
+            // --- INITIALIZATION ---
+            updateUIAndSave();
+        });
+    </script>
+</body>
+</html>
