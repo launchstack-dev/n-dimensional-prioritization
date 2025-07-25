@@ -106,11 +106,24 @@
             border-radius: 50%;
             border: 1px solid rgba(0,0,0,0.1);
         }
+        /* Fullscreen styles */
+        .fullscreen-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(248, 250, 252, 0.95);
+            z-index: 100;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+        }
     </style>
 </head>
 <body class="text-slate-800">
 
-    <div class="container mx-auto p-4 md:p-8">
+    <div id="main-container" class="container mx-auto p-4 md:p-8">
         <header class="text-center mb-8">
             <h1 class="text-3xl md:text-4xl font-bold text-slate-900">N-Dimensional Prioritization Matrix</h1>
             <p class="text-slate-600 mt-2">Drag bubbles on the chart to dynamically update their values.</p>
@@ -119,7 +132,7 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
             
             <!-- Left Panel -->
-            <div class="card space-y-6">
+            <div id="left-panel" class="card space-y-6">
                 <div class="flex justify-between items-start">
                     <h2 class="text-xl font-semibold text-slate-900">1. Setup</h2>
                     <button id="clear-data-btn" class="text-sm bg-red-500 text-white px-3 py-1 rounded-md font-semibold hover:bg-red-600 transition-colors" title="Clear all items and dimensions and start fresh.">Clear & Reset</button>
@@ -165,17 +178,22 @@
             </div>
 
             <!-- Right Panel -->
-            <div class="card">
+            <div id="right-panel" class="card flex flex-col">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-xl font-semibold text-slate-900">3. Visualize & Prioritize</h2>
-                    <div class="relative">
-                         <button id="ranked-views-btn" class="text-sm bg-indigo-600 text-white px-3 py-1 rounded-md font-semibold hover:bg-indigo-700 transition-colors flex items-center gap-2" title="Get a ranked list of the most insightful chart views.">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a1 1 0 011-1h14a1 1 0 110 2H3a1 1 0 01-1-1z" /></svg>
-                            Ranked Views
-                        </button>
-                        <div id="ranked-views-dropdown" class="hidden absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
-                            <div class="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu"></div>
+                    <div class="flex items-center gap-4">
+                        <div class="relative">
+                             <button id="ranked-views-btn" class="text-sm bg-indigo-600 text-white px-3 py-1 rounded-md font-semibold hover:bg-indigo-700 transition-colors flex items-center gap-2" title="Get a ranked list of the most insightful chart views.">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a1 1 0 011-1h14a1 1 0 110 2H3a1 1 0 01-1-1z" /></svg>
+                                Ranked Views
+                            </button>
+                            <div id="ranked-views-dropdown" class="hidden absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
+                                <div class="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu"></div>
+                            </div>
                         </div>
+                        <button id="fullscreen-btn" title="Enter Fullscreen View" class="text-slate-500 hover:text-indigo-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 1v4m0 0h-4m4 0l-5-5" /></svg>
+                        </button>
                     </div>
                 </div>
                 <div class="p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-4">
@@ -218,37 +236,42 @@
                 </div>
 
                 <!-- Chart Area -->
-                <div class="relative">
-                    <div id="chart-container" class="w-full h-96 bg-slate-50 rounded-lg mt-6">
-                        <div id="chart-bg" class="absolute inset-0 w-full h-full pointer-events-none p-6">
-                            <div class="w-full h-full relative">
-                                <div class="absolute bottom-0 left-0 w-full h-px bg-slate-400"></div>
-                                <div class="absolute bottom-0 left-0 h-full w-px bg-slate-400"></div>
-                                <div class="absolute top-1/2 left-0 w-full h-px bg-slate-300/80 border-t border-dashed border-slate-400"></div>
-                                <div class="absolute left-1/2 top-0 h-full w-px bg-slate-300/80 border-l border-dashed border-slate-400"></div>
+                <div class="relative flex-grow flex flex-col mt-6">
+                    <div class="grid grid-cols-[auto,1fr] grid-rows-[1fr,auto] flex-grow">
+                        <!-- Y Axis Label Area -->
+                        <div class="flex flex-col items-center justify-between py-4 text-xs text-slate-500">
+                            <span id="y-max-label"></span>
+                            <div class="flex-grow flex flex-col items-center justify-center gap-2">
+                                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
+                                <div id="y-axis-label" class="font-semibold text-slate-600 -rotate-90 whitespace-nowrap"></div>
+                                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                             </div>
+                            <span id="y-min-label"></span>
                         </div>
-                        <div id="chart-labels" class="absolute inset-0 w-full h-full pointer-events-none text-xs text-slate-500">
-                            <div class="absolute top-0 -left-12 w-12 h-full flex flex-col items-center py-6">
-                                <span id="y-max-label"></span>
-                                <div class="flex-grow flex flex-col items-center justify-center gap-2">
-                                    <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
-                                    <div id="y-axis-label" class="font-semibold text-slate-600 -rotate-90 whitespace-nowrap"></div>
-                                    <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        <!-- Chart Container -->
+                        <div id="chart-container" class="relative bg-slate-50 rounded-lg">
+                            <div id="chart-bg" class="absolute inset-0 w-full h-full pointer-events-none">
+                                <div class="w-full h-full relative">
+                                    <div class="absolute bottom-0 left-0 w-full h-px bg-slate-400"></div>
+                                    <div class="absolute bottom-0 left-0 h-full w-px bg-slate-400"></div>
+                                    <div class="absolute top-1/2 left-0 w-full h-px bg-slate-300/80 border-t border-dashed border-slate-400"></div>
+                                    <div class="absolute left-1/2 top-0 h-full w-px bg-slate-300/80 border-l border-dashed border-slate-400"></div>
                                 </div>
-                                <span id="y-min-label"></span>
                             </div>
-                            <div class="absolute left-0 -bottom-10 w-full h-10 flex items-center px-6">
-                                 <span id="x-min-label"></span>
-                                 <div class="flex-grow flex items-center justify-center gap-2">
-                                    <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                                    <div id="x-axis-label" class="font-semibold text-slate-600"></div>
-                                    <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                                 </div>
-                                 <span id="x-max-label"></span>
-                            </div>
+                            <div id="bubble-container" class="absolute inset-0"></div>
                         </div>
-                        <div id="bubble-container" class="absolute inset-6"></div>
+                        <!-- Empty corner -->
+                        <div></div>
+                        <!-- X Axis Label Area -->
+                        <div class="flex items-center justify-between px-4 pt-1 text-xs text-slate-500">
+                            <span id="x-min-label"></span>
+                             <div class="flex-grow flex items-center justify-center gap-2">
+                                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                                <div id="x-axis-label" class="font-semibold text-slate-600"></div>
+                                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                             </div>
+                             <span id="x-max-label"></span>
+                        </div>
                     </div>
                      <div id="agg-drag-note" class="hidden text-center text-xs text-slate-500 mt-2">
                         Note: Bubbles cannot be dragged when an aggregate dimension is on an axis.
@@ -257,6 +280,14 @@
             </div>
 
         </div>
+    </div>
+    
+    <!-- Fullscreen Modal -->
+    <div id="fullscreen-overlay" class="hidden">
+        <button id="close-fullscreen-btn" title="Exit Fullscreen (Esc)" class="absolute top-4 right-4 text-slate-500 hover:text-indigo-600">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+        <!-- Right panel content will be moved here -->
     </div>
 
     <script>
@@ -339,6 +370,10 @@
             const rankedViewsDropdown = getEl('ranked-views-dropdown');
             const showLabelsToggle = getEl('show-labels-toggle');
             const aggDragNote = getEl('agg-drag-note');
+            const fullscreenBtn = getEl('fullscreen-btn');
+            const closeFullscreenBtn = getEl('close-fullscreen-btn');
+            const fullscreenOverlay = getEl('fullscreen-overlay');
+            const rightPanel = getEl('right-panel');
 
             // --- LOGIC ---
             const calculateAggregates = () => {
@@ -726,7 +761,7 @@
             });
 
             paletteSelector.addEventListener('click', (e) => {
-                const target = e.target.closest('.palette-.swatch');
+                const target = e.target.closest('.palette-swatch');
                 if (target) {
                     state.theme.selectedPalette = target.dataset.palette;
                     updateUIAndSave();
@@ -795,6 +830,25 @@
                         state.ui.showRankedViews = false;
                         renderRankedViews();
                     }
+                }
+            });
+
+            // --- FULLSCREEN LOGIC ---
+            fullscreenBtn.addEventListener('click', () => {
+                fullscreenOverlay.classList.remove('hidden');
+                fullscreenOverlay.classList.add('fullscreen-overlay');
+                fullscreenOverlay.appendChild(rightPanel);
+            });
+
+            closeFullscreenBtn.addEventListener('click', () => {
+                fullscreenOverlay.classList.add('hidden');
+                fullscreenOverlay.classList.remove('fullscreen-overlay');
+                getEl('main-container').querySelector('.grid').appendChild(rightPanel);
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && !fullscreenOverlay.classList.contains('hidden')) {
+                    closeFullscreenBtn.click();
                 }
             });
 
