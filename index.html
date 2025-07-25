@@ -9,6 +9,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        html {
+            scroll-behavior: smooth;
+        }
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f8fafc; /* slate-50 */
@@ -129,12 +132,12 @@
             <p class="text-slate-600 mt-2">Drag bubbles on the chart to dynamically update their values.</p>
         </header>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div class="grid grid-cols-1 gap-8">
             
-            <!-- Left Panel -->
-            <div id="left-panel" class="card space-y-6">
+            <!-- Setup Panel -->
+            <div id="setup-panel" class="card space-y-6">
                 <div class="flex justify-between items-start">
-                    <h2 class="text-xl font-semibold text-slate-900">1. Setup</h2>
+                    <h2 class="text-xl font-semibold text-slate-900">1. Setup Data</h2>
                     <button id="clear-data-btn" class="text-sm bg-red-500 text-white px-3 py-1 rounded-md font-semibold hover:bg-red-600 transition-colors" title="Clear all items and dimensions and start fresh.">Clear & Reset</button>
                 </div>
                 <div>
@@ -177,8 +180,8 @@
                 </div>
             </div>
 
-            <!-- Right Panel -->
-            <div id="right-panel" class="card flex flex-col">
+            <!-- Visualization Panel -->
+            <div id="viz-panel" class="card flex flex-col">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-xl font-semibold text-slate-900">3. Visualize & Prioritize</h2>
                     <div class="flex items-center gap-4">
@@ -237,7 +240,7 @@
 
                 <!-- Chart Area -->
                 <div class="relative flex-grow flex flex-col mt-6">
-                    <div class="grid grid-cols-[auto,1fr] grid-rows-[1fr,auto] flex-grow gap-x-3">
+                    <div class="grid grid-cols-[auto,1fr] grid-rows-[1fr,auto] flex-grow gap-x-3 min-h-[24rem]">
                         <!-- Y Axis Label Area -->
                         <div class="flex flex-col items-center justify-between text-xs text-slate-500 row-start-1 col-start-1 py-1">
                             <span id="y-max-label"></span>
@@ -282,12 +285,20 @@
         </div>
     </div>
     
+    <!-- Floating Nav Buttons -->
+    <button id="scroll-to-chart-btn" class="hidden md:flex fixed bottom-8 right-8 bg-indigo-600 text-white p-3 rounded-full shadow-lg hover:bg-indigo-700 transition-transform hover:scale-110 z-50" title="Go to Chart">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+    </button>
+    <button id="scroll-to-setup-btn" class="hidden fixed bottom-8 right-8 bg-indigo-600 text-white p-3 rounded-full shadow-lg hover:bg-indigo-700 transition-transform hover:scale-110 z-50" title="Go to Setup">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+    </button>
+
     <!-- Fullscreen Modal -->
     <div id="fullscreen-overlay" class="hidden">
         <button id="close-fullscreen-btn" title="Exit Fullscreen (Esc)" class="absolute top-4 right-4 text-slate-500 hover:text-indigo-600">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
-        <!-- Right panel content will be moved here -->
+        <!-- Viz panel content will be moved here -->
     </div>
 
     <script>
@@ -373,7 +384,10 @@
             const fullscreenBtn = getEl('fullscreen-btn');
             const closeFullscreenBtn = getEl('close-fullscreen-btn');
             const fullscreenOverlay = getEl('fullscreen-overlay');
-            const rightPanel = getEl('right-panel');
+            const vizPanel = getEl('viz-panel');
+            const setupPanel = getEl('setup-panel');
+            const scrollToChartBtn = getEl('scroll-to-chart-btn');
+            const scrollToSetupBtn = getEl('scroll-to-setup-btn');
 
             // --- LOGIC ---
             const calculateAggregates = () => {
@@ -837,13 +851,13 @@
             fullscreenBtn.addEventListener('click', () => {
                 fullscreenOverlay.classList.remove('hidden');
                 fullscreenOverlay.classList.add('fullscreen-overlay');
-                fullscreenOverlay.appendChild(rightPanel);
+                fullscreenOverlay.appendChild(vizPanel);
             });
 
             closeFullscreenBtn.addEventListener('click', () => {
                 fullscreenOverlay.classList.add('hidden');
                 fullscreenOverlay.classList.remove('fullscreen-overlay');
-                getEl('main-container').querySelector('.grid').appendChild(rightPanel);
+                getEl('main-container').querySelector('.grid').appendChild(vizPanel);
             });
 
             document.addEventListener('keydown', (e) => {
@@ -851,6 +865,26 @@
                     closeFullscreenBtn.click();
                 }
             });
+
+            // --- SCROLL NAV LOGIC ---
+            scrollToChartBtn.addEventListener('click', () => {
+                vizPanel.scrollIntoView({ behavior: 'smooth' });
+            });
+            scrollToSetupBtn.addEventListener('click', () => {
+                setupPanel.scrollIntoView({ behavior: 'smooth' });
+            });
+
+            const scrollObserver = new IntersectionObserver((entries) => {
+                if (entries[0].isIntersecting) {
+                    scrollToChartBtn.classList.add('hidden');
+                    scrollToSetupBtn.classList.remove('hidden');
+                } else {
+                    scrollToChartBtn.classList.remove('hidden');
+                    scrollToSetupBtn.classList.add('hidden');
+                }
+            }, { threshold: 0.1 });
+
+            scrollObserver.observe(vizPanel);
 
             // --- INITIALIZATION ---
             updateUIAndSave();
