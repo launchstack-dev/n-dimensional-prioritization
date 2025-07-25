@@ -122,6 +122,35 @@
             display: flex;
             flex-direction: column;
         }
+        /* Info Tooltip */
+        .info-tooltip {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+        }
+        .info-tooltip .tooltip-text {
+            visibility: hidden;
+            width: 240px;
+            background-color: #1e293b;
+            color: #fff;
+            text-align: left;
+            border-radius: 6px;
+            padding: 8px 12px;
+            position: absolute;
+            z-index: 50;
+            bottom: 150%;
+            left: 50%;
+            margin-left: -120px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 12px;
+            font-weight: normal;
+            pointer-events: none;
+        }
+        .info-tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
     </style>
 </head>
 <body class="text-slate-800">
@@ -157,7 +186,13 @@
                     <ul id="dimensions-list" class="mt-3 space-y-2"></ul>
                 </div>
                 <div class="border-t pt-4">
-                    <h3 class="font-semibold mb-2 text-slate-800">Create Aggregate Dimension</h3>
+                    <h3 class="font-semibold mb-2 text-slate-800 flex items-center gap-2">
+                        Create Aggregate Dimension
+                        <div class="info-tooltip">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400 cursor-pointer" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            <span class="tooltip-text">An aggregate dimension's value is the sum of selected base dimensions. It updates automatically and cannot be edited or dragged directly on the chart.</span>
+                        </div>
+                    </h3>
                     <div class="space-y-3">
                         <input type="text" id="agg-name-input" placeholder="New Aggregate Name" class="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                         <div class="p-3 bg-slate-50 rounded-md border">
@@ -183,14 +218,24 @@
             <!-- Visualization Panel -->
             <div id="viz-panel" class="card flex flex-col">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-semibold text-slate-900">3. Visualize & Prioritize</h2>
+                    <h2 class="text-xl font-semibold text-slate-900 flex items-center gap-2">
+                        3. Visualize & Prioritize
+                        <div class="info-tooltip">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400 cursor-pointer" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            <span class="tooltip-text">Bubbles on the chart can be dragged to change their X and Y axis values directly. This feature is disabled for aggregate dimensions.</span>
+                        </div>
+                    </h2>
                     <div class="flex items-center gap-4">
-                        <div class="relative">
-                             <button id="ranked-views-btn" class="text-sm bg-indigo-600 text-white px-3 py-1 rounded-md font-semibold hover:bg-indigo-700 transition-colors flex items-center gap-2" title="Get a ranked list of the most insightful chart views.">
+                        <div class="relative flex items-center gap-2">
+                             <button id="ranked-views-btn" class="text-sm bg-indigo-600 text-white px-3 py-1 rounded-md font-semibold hover:bg-indigo-700 transition-colors flex items-center gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a1 1 0 011-1h14a1 1 0 110 2H3a1 1 0 01-1-1z" /></svg>
                                 Ranked Views
                             </button>
-                            <div id="ranked-views-dropdown" class="hidden absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
+                             <div class="info-tooltip">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400 cursor-pointer" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                <span class="tooltip-text">Automatically finds and ranks the most insightful chart views by identifying axis combinations that spread the items out the most.</span>
+                            </div>
+                            <div id="ranked-views-dropdown" class="hidden absolute right-0 mt-8 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
                                 <div class="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu"></div>
                             </div>
                         </div>
@@ -225,6 +270,9 @@
                                 <label class="switch"><input id="size-invert-toggle" type="checkbox"><span class="slider"></span></label>
                             </div>
                         </div>
+                    </div>
+                     <div id="axis-warning" class="hidden text-center text-xs text-red-600 mt-2 font-semibold">
+                        Warning: Using the same dimension for an axis and bubble size is redundant.
                     </div>
                     <div class="grid grid-cols-2 gap-4 border-t border-slate-200 pt-4">
                         <div>
@@ -395,6 +443,7 @@
             const scrollToSetupBtn = getEl('scroll-to-setup-btn');
             const chartAreaWrapper = getEl('chart-area-wrapper');
             const resizeHandle = getEl('resize-handle');
+            const axisWarning = getEl('axis-warning');
 
             // --- LOGIC ---
             const calculateAggregates = () => {
@@ -505,6 +554,19 @@
                 xInvertToggle.checked = state.axis.inverted.x;
                 yInvertToggle.checked = state.axis.inverted.y;
                 sizeInvertToggle.checked = state.axis.inverted.size;
+
+                // Axis warning logic
+                const { x, y, size } = state.axis;
+                const selects = [xAxisSelect, yAxisSelect, sizeSelect];
+                selects.forEach(s => s.classList.remove('!border-red-500'));
+                if (size && (size === x || size === y)) {
+                    axisWarning.classList.remove('hidden');
+                    if (size === x) xAxisSelect.classList.add('!border-red-500');
+                    if (size === y) yAxisSelect.classList.add('!border-red-500');
+                    sizeSelect.classList.add('!border-red-500');
+                } else {
+                    axisWarning.classList.add('hidden');
+                }
             }
 
             function renderThemeSelectors() {
