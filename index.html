@@ -237,9 +237,9 @@
 
                 <!-- Chart Area -->
                 <div class="relative flex-grow flex flex-col mt-6">
-                    <div class="grid grid-cols-[auto,1fr] grid-rows-[1fr,auto] flex-grow">
+                    <div class="grid grid-cols-[auto,1fr] grid-rows-[1fr,auto] flex-grow gap-x-3">
                         <!-- Y Axis Label Area -->
-                        <div class="flex flex-col items-center justify-between py-4 text-xs text-slate-500">
+                        <div class="flex flex-col items-center justify-between text-xs text-slate-500 row-start-1 col-start-1">
                             <span id="y-max-label"></span>
                             <div class="flex-grow flex flex-col items-center justify-center gap-2">
                                 <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
@@ -249,7 +249,7 @@
                             <span id="y-min-label"></span>
                         </div>
                         <!-- Chart Container -->
-                        <div id="chart-container" class="relative bg-slate-50 rounded-lg">
+                        <div id="chart-container" class="relative bg-slate-50 rounded-lg row-start-1 col-start-2">
                             <div id="chart-bg" class="absolute inset-0 w-full h-full pointer-events-none">
                                 <div class="w-full h-full relative">
                                     <div class="absolute bottom-0 left-0 w-full h-px bg-slate-400"></div>
@@ -261,9 +261,9 @@
                             <div id="bubble-container" class="absolute inset-0"></div>
                         </div>
                         <!-- Empty corner -->
-                        <div></div>
+                        <div class="row-start-2 col-start-1"></div>
                         <!-- X Axis Label Area -->
-                        <div class="flex items-center justify-between px-4 pt-1 text-xs text-slate-500">
+                        <div class="flex items-center justify-between pt-2 text-xs text-slate-500 row-start-2 col-start-2">
                             <span id="x-min-label"></span>
                              <div class="flex-grow flex items-center justify-center gap-2">
                                 <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
@@ -628,7 +628,7 @@
             // --- DRAG AND DROP HANDLERS ---
             function onDragStart(e) {
                 e.preventDefault();
-                const item = e.target.closest('.bubble').dataset.item;
+                const item = e.target.closest('.bubble')?.dataset.item;
                 if (!item) return;
                 state.dragging = { active: true, item: item, element: e.target.closest('.bubble') };
                 state.dragging.element.classList.add('dragging');
